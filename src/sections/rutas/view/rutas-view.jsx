@@ -1,62 +1,29 @@
-import _ from 'lodash';
-import { useState, useEffect } from 'react';
-import { Stack, Container, Typography } from '@mui/material';
-import { useAxiosPost } from '../../../hooks/useAxiosPost';
-import MapContainer from '../map-container';
+import { useState } from 'react';
+
+import { Tab, Tabs, Stack, Container, Typography } from '@mui/material';
+
+import CargaTab from '../carga-tab';
+import ZonasTab from '../zonas-tab';
 
 export default function RutasView() {
-  const postClientes = useAxiosPost();
-  const [markers, setMarkers] = useState([]);
-  const [polygonos, setPolygonos] = useState([]);
-  const buscarClientes = async () => {
-    postClientes('obtener_todos_clientes', 'asd', async (resp) => {
-      const { clientes, polygonos } = resp;
-      const prMarker = [];
-      _.map(clientes, (cli) => {
-        prMarker.push({
-          id: cli.id,
-          lat: parseFloat(cli.latitude),
-          lng: parseFloat(cli.longitude),
-          visible: false,
-        });
-      });
-      setMarkers(prMarker);
-      const arrPolygonos = [];
-      _.map(polygonos, (poly) => {
-        const arrCli = [];
-        _.map(poly.clientes, (polyCli) => {
-          arrCli.push({
-            lat: parseFloat(polyCli.latitude),
-            lng: parseFloat(polyCli.longitude),
-          });
-        });
-        arrPolygonos.push({
-          color: poly.color,
-          cordenadas: JSON.parse(poly.cordenadas),
-          clientes: arrCli,
-        });
-      });
-      setPolygonos(arrPolygonos);
-    });
-  };
-  useEffect(() => {
-    buscarClientes();
-    // buscarPolygonos();
-  }, [setMarkers, setPolygonos]);
+  const [tab, setTab] = useState('territorios');
 
   return (
-    <Container>
-      <Stack direction="row" alignItems="center" justifyContent="space-between">
-        <Typography variant="h4">Asignar Rutas</Typography>
+    <Container maxWidth="xl">
+      <Stack mb={3}>
+        <Typography variant="h4">Zonas de reparto</Typography>
+        <Typography variant="body2" color="text.secondary">
+          Marca los territorios en el mapa y revisa como queda repartida la carga de la semana.
+        </Typography>
       </Stack>
 
-      <MapContainer
-        clientesMarkers={markers}
-        setClientesMarkers={setMarkers}
-        postRutas={postClientes}
-        polygonos={polygonos}
-        buscarClientes={buscarClientes}
-      />
+      <Tabs value={tab} onChange={(e, valor) => setTab(valor)} sx={{ mb: 3 }}>
+        <Tab value="territorios" label="Territorios" />
+        <Tab value="carga" label="Carga y cobertura" />
+      </Tabs>
+
+      {tab === 'territorios' && <ZonasTab />}
+      {tab === 'carga' && <CargaTab />}
     </Container>
   );
 }

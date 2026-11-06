@@ -21,7 +21,7 @@ import NotificationsPopover from './common/notifications-popover';
 
 // ----------------------------------------------------------------------
 
-export default function Header({ onOpenNav }) {
+export default function Header({ onOpenNav, anchoNav = NAV.WIDTH }) {
   const theme = useTheme();
 
   const lgUp = useResponsive('up', 'lg');
@@ -55,11 +55,11 @@ export default function Header({ onOpenNav }) {
         ...bgBlur({
           color: theme.palette.background.default,
         }),
-        transition: theme.transitions.create(['height'], {
+        transition: theme.transitions.create(['height', 'width'], {
           duration: theme.transitions.duration.shorter,
         }),
         ...(lgUp && {
-          width: `calc(100% - ${NAV.WIDTH + 1}px)`,
+          width: `calc(100% - ${anchoNav + 1}px)`,
           height: HEADER.H_DESKTOP,
         }),
       }}
@@ -78,4 +78,5 @@ export default function Header({ onOpenNav }) {
 
 Header.propTypes = {
   onOpenNav: PropTypes.func,
+  anchoNav: PropTypes.number,
 };

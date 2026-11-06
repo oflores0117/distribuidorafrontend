@@ -1,61 +1,69 @@
-import SvgColor from 'src/components/svg-color';
+import Iconify from 'src/components/iconify';
 
 // ----------------------------------------------------------------------
 
-const icon = (name) => (
-  <SvgColor src={`/assets/icons/navbar/${name}.svg`} sx={{ width: 1, height: 1 }} />
-);
+// En /assets/icons/navbar solo hay seis iconos, asi que la mitad de los modulos
+// terminaba repitiendo el de usuario o el de carrito. Estos salen de iconify,
+// el mismo set 'eva' que ya usa el resto de la app.
+const icon = (nombre) => <Iconify icon={nombre} width={24} />;
 
+// Ordenado por como se usa en el dia: primero el circuito del reparto
+// (pedido -> ruta -> camion) y despues los datos que casi no cambian.
 const navConfig = [
   {
     title: 'dashboard',
     path: '/',
-    icon: icon('ic_analytics'),
+    icon: icon('eva:pie-chart-2-fill'),
   },
   {
-    title: 'rutas',
+    title: 'pedidos',
+    path: '/pedidos',
+    icon: icon('eva:file-text-fill'),
+  },
+  {
+    title: 'planificacion',
+    path: '/planificacion',
+    icon: icon('eva:map-fill'),
+  },
+  {
+    title: 'mi ruta',
+    path: '/mi-ruta',
+    icon: icon('eva:navigation-2-fill'),
+  },
+  {
+    title: 'inventario',
+    path: '/inventario',
+    icon: icon('eva:archive-fill'),
+  },
+  {
+    title: 'zonas',
     path: '/rutas',
-    icon: icon('ic_user'),
-    rutas: [
-      { title: 'ver mis ruta', collapse: false },
-      { title: 'asignar rutas', collapse: false },
-      { title: 'crear poligonos', collapse: false },
-    ],
+    icon: icon('eva:pin-fill'),
   },
   {
     title: 'clientes',
     path: '/clientes',
-    icon: icon('ic_user'),
+    icon: icon('eva:people-fill'),
+  },
+  {
+    title: 'productos',
+    path: '/productos',
+    icon: icon('eva:cube-fill'),
+  },
+  {
+    title: 'categorias',
+    path: '/categorias',
+    icon: icon('eva:pricetags-fill'),
+  },
+  {
+    title: 'proveedores',
+    path: '/proveedores',
+    icon: icon('eva:briefcase-fill'),
   },
   {
     title: 'funcionarios',
     path: '/funcionarios',
-    icon: icon('ic_user'),
-  },
-  {
-    title: 'user',
-    path: '/user',
-    icon: icon('ic_user'),
-  },
-  {
-    title: 'product',
-    path: '/products',
-    icon: icon('ic_cart'),
-  },
-  {
-    title: 'blog',
-    path: '/blog',
-    icon: icon('ic_blog'),
-  },
-  {
-    title: 'login',
-    path: '/login',
-    icon: icon('ic_lock'),
-  },
-  {
-    title: 'Not found',
-    path: '/404',
-    icon: icon('ic_disabled'),
+    icon: icon('eva:person-done-fill'),
   },
 ];
 

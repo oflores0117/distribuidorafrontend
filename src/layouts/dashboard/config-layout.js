@@ -8,4 +8,6 @@ export const HEADER = {
 
 export const NAV = {
   WIDTH: 280,
+  // Menu achicado: solo iconos
+  WIDTH_MINI: 88,
 };

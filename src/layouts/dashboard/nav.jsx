@@ -1,11 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import PropTypes from 'prop-types';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Drawer from '@mui/material/Drawer';
 import Avatar from '@mui/material/Avatar';
+import Tooltip from '@mui/material/Tooltip';
 import { alpha } from '@mui/material/styles';
+import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import ListItemButton from '@mui/material/ListItemButton';
 
@@ -17,19 +19,23 @@ import { useResponsive } from 'src/hooks/use-responsive';
 import { account } from 'src/_mock/account';
 
 import Logo from 'src/components/logo';
+import Iconify from 'src/components/iconify';
 import Scrollbar from 'src/components/scrollbar';
 
 import { NAV } from './config-layout';
 import navConfig from './config-navigation';
-import { Collapse, List, ListItemText } from '@mui/material';
 
 // ----------------------------------------------------------------------
 
-export default function Nav({ openNav, onCloseNav }) {
+export default function Nav({ openNav, onCloseNav, mini, onAlternarMini }) {
   const pathname = usePathname();
 
   const upLg = useResponsive('up', 'lg');
-  const [navigation, setNavigation] = useState(navConfig);
+
+  // En celular el menu es un cajon que se abre entero; el modo mini es solo de escritorio
+  const achicado = upLg && mini;
+  const ancho = achicado ? NAV.WIDTH_MINI : NAV.WIDTH;
+
   useEffect(() => {
     if (openNav) {
       onCloseNav();
@@ -37,7 +43,11 @@ export default function Nav({ openNav, onCloseNav }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
-  const renderAccount = (
+  const renderAccount = achicado ? (
+    <Tooltip title={`${account.displayName} - ${account.role}`} placement="right">
+      <Avatar src={account.photoURL} alt="photoURL" sx={{ my: 3, mx: 'auto' }} />
+    </Tooltip>
+  ) : (
     <Box
       sx={{
         my: 3,
@@ -63,9 +73,9 @@ export default function Nav({ openNav, onCloseNav }) {
   );
 
   const renderMenu = (
-    <Stack component="nav" spacing={0.5} sx={{ px: 2 }}>
-      {navigation.map((item) => (
-        <NavItem key={item.title} item={item} />
+    <Stack component="nav" spacing={0.5} sx={{ px: achicado ? 1.5 : 2 }}>
+      {navConfig.map((item) => (
+        <NavItem key={item.title} item={item} mini={achicado} />
       ))}
     </Stack>
   );
@@ -81,7 +91,26 @@ export default function Nav({ openNav, onCloseNav }) {
         },
       }}
     >
-      <Logo sx={{ mt: 3, ml: 4 }} />
+      <Stack
+        direction={achicado ? 'column' : 'row'}
+        alignItems="center"
+        justifyContent="space-between"
+        spacing={1}
+        sx={{ mt: 3, px: achicado ? 0 : 2, pl: achicado ? 0 : 4 }}
+      >
+        <Logo />
+
+        {upLg && (
+          <Tooltip title={achicado ? 'Expandir menu' : 'Achicar menu'} placement="right">
+            <IconButton size="small" onClick={onAlternarMini}>
+              <Iconify
+                icon={achicado ? 'eva:arrowhead-right-fill' : 'eva:arrowhead-left-fill'}
+                width={20}
+              />
+            </IconButton>
+          </Tooltip>
+        )}
+      </Stack>
 
       {renderAccount}
 
@@ -95,7 +124,8 @@ export default function Nav({ openNav, onCloseNav }) {
     <Box
       sx={{
         flexShrink: { lg: 0 },
-        width: { lg: NAV.WIDTH },
+        width: { lg: ancho },
+        transition: (theme) => theme.transitions.create('width'),
       }}
     >
       {upLg ? (
@@ -103,7 +133,8 @@ export default function Nav({ openNav, onCloseNav }) {
           sx={{
             height: 1,
             position: 'fixed',
-            width: NAV.WIDTH,
+            width: ancho,
+            transition: (theme) => theme.transitions.create('width'),
             borderRight: (theme) => `dashed 1px ${theme.palette.divider}`,
           }}
         >
@@ -129,57 +160,58 @@ export default function Nav({ openNav, onCloseNav }) {
 Nav.propTypes = {
   openNav: PropTypes.bool,
   onCloseNav: PropTypes.func,
+  mini: PropTypes.bool,
+  onAlternarMini: PropTypes.func,
 };
 
 // ----------------------------------------------------------------------
 
-function NavItem({ item }) {
+function NavItem({ item, mini }) {
   const pathname = usePathname();
 
   const active = item.path === pathname;
-  return (
-    <>
-      <ListItemButton
-        component={RouterLink}
-        href={item.path}
-        sx={{
-          minHeight: 44,
-          borderRadius: 0.75,
-          typography: 'body2',
-          color: 'text.secondary',
-          textTransform: 'capitalize',
-          fontWeight: 'fontWeightMedium',
-          ...(active && {
-            color: 'primary.main',
-            fontWeight: 'fontWeightSemiBold',
-            bgcolor: (theme) => alpha(theme.palette.primary.main, 0.08),
-            '&:hover': {
-              bgcolor: (theme) => alpha(theme.palette.primary.main, 0.16),
-            },
-          }),
-        }}
-      >
-        <Box component="span" sx={{ width: 24, height: 24, mr: 2 }}>
-          {item.icon}
-        </Box>
 
-        <Box component="span">{item.title} </Box>
-      </ListItemButton>
-      {'rutas' in item && (
-        <>
-          <Collapse in={item.collapse} timeout="auto" unmountOnExit>
-            <List component="div" disablePadding>
-              <ListItemButton sx={{ pl: 4 }}>
-                <ListItemText primary="Asignar Rutas" />
-              </ListItemButton>
-            </List>
-          </Collapse>
-        </>
-      )}
-    </>
+  const boton = (
+    <ListItemButton
+      component={RouterLink}
+      href={item.path}
+      sx={{
+        minHeight: 44,
+        borderRadius: 0.75,
+        typography: 'body2',
+        color: 'text.secondary',
+        textTransform: 'capitalize',
+        fontWeight: 'fontWeightMedium',
+        ...(mini && { justifyContent: 'center', px: 0 }),
+        ...(active && {
+          color: 'primary.main',
+          fontWeight: 'fontWeightSemiBold',
+          bgcolor: (theme) => alpha(theme.palette.primary.main, 0.08),
+          '&:hover': {
+            bgcolor: (theme) => alpha(theme.palette.primary.main, 0.16),
+          },
+        }),
+      }}
+    >
+      <Box component="span" sx={{ width: 24, height: 24, mr: mini ? 0 : 2 }}>
+        {item.icon}
+      </Box>
+
+      {!mini && <Box component="span">{item.title}</Box>}
+    </ListItemButton>
+  );
+
+  if (!mini) return boton;
+
+  // Sin texto visible, el nombre del modulo aparece al pasar el mouse
+  return (
+    <Tooltip title={item.title} placement="right">
+      {boton}
+    </Tooltip>
   );
 }
 
 NavItem.propTypes = {
   item: PropTypes.object,
+  mini: PropTypes.bool,
 };

@@ -23,7 +23,9 @@ export function useAxiosPost() {
     }
   }, [input]);
   const postAxios = (urlParams, data, callback) => {
-    const url = `http://localhost/backend-algo/public/${urlParams}`;
+    const baseUrl =
+      import.meta.env.VITE_API_URL || 'http://localhost/distribuidorabackend/public/';
+    const url = `${baseUrl}${urlParams}`;
     const config = '';
     setInput({ ...input, url, data, config, callback });
   };

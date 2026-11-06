@@ -1,230 +1,186 @@
-import { faker } from '@faker-js/faker';
+import swal from 'sweetalert';
+import { useState, useEffect, useCallback } from 'react';
 
-import Container from '@mui/material/Container';
 import Grid from '@mui/material/Unstable_Grid2';
-import Typography from '@mui/material/Typography';
+import {
+  Box,
+  Card,
+  Chip,
+  Stack,
+  Container,
+  TextField,
+  CardHeader,
+  Typography,
+  CircularProgress,
+} from '@mui/material';
 
-import Iconify from 'src/components/iconify';
+import { apiPost } from 'src/api/client';
 
-import AppTasks from '../app-tasks';
-import AppNewsUpdate from '../app-news-update';
-import AppOrderTimeline from '../app-order-timeline';
-import AppCurrentVisits from '../app-current-visits';
-import AppWebsiteVisits from '../app-website-visits';
-import AppWidgetSummary from '../app-widget-summary';
-import AppTrafficBySite from '../app-traffic-by-site';
-import AppCurrentSubject from '../app-current-subject';
-import AppConversionRates from '../app-conversion-rates';
+import Indicador from '../indicador';
+import RutasDelDia from '../rutas-del-dia';
+import AlertasStock from '../alertas-stock';
+import VentasSemana from '../ventas-semana';
+import { moneda } from '../../pedidos/estados';
+import { ESTADOS_PARADA, ETIQUETA_PARADA } from '../../planificacion/entregas';
 
-// ----------------------------------------------------------------------
+// Fecha local, no UTC: a la noche toISOString ya daria el dia siguiente
+const hoy = () => {
+  const ahora = new Date();
+  const local = new Date(ahora.getTime() - ahora.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
+};
 
+/**
+ * Inicio: como va el reparto del dia, cuanto se vendio y cobro, que plata
+ * falta rendir y que hay que reponer. Todo sale de obtener_resumen_dashboard.
+ */
 export default function AppView() {
+  const [fecha, setFecha] = useState(hoy());
+  const [cargando, setCargando] = useState(true);
+  const [datos, setDatos] = useState(null);
+
+  const buscar = useCallback(async () => {
+    setCargando(true);
+    try {
+      const resp = await apiPost('obtener_resumen_dashboard', { fecha });
+      if (!resp.success) {
+        swal('Error', resp.error || 'No se pudo cargar el resumen', 'error');
+        return;
+      }
+      setDatos(resp);
+    } catch (err) {
+      swal('No se pudo cargar el resumen', err.message, 'error');
+    } finally {
+      setCargando(false);
+    }
+  }, [fecha]);
+
+  useEffect(() => {
+    buscar();
+  }, [buscar]);
+
+  const kpis = datos ? datos.kpis : null;
+
   return (
     <Container maxWidth="xl">
-      <Typography variant="h4" sx={{ mb: 5 }}>
-        Hi, Welcome back 👋
-      </Typography>
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        alignItems={{ sm: 'center' }}
+        justifyContent="space-between"
+        spacing={2}
+        sx={{ mb: 4 }}
+      >
+        <Box>
+          <Typography variant="h4">Resumen del reparto</Typography>
+          <Typography variant="body2" color="text.secondary">
+            Lo que paso en las rutas del dia elegido
+          </Typography>
+        </Box>
+        <TextField
+          size="small"
+          type="date"
+          label="Fecha"
+          value={fecha}
+          onChange={(e) => setFecha(e.target.value || hoy())}
+          InputLabelProps={{ shrink: true }}
+        />
+      </Stack>
 
-      <Grid container spacing={3}>
-        <Grid xs={12} sm={6} md={3}>
-          <AppWidgetSummary
-            title="Weekly Sales"
-            total={714000}
-            color="success"
-            icon={<img alt="icon" src="/assets/icons/glass/ic_glass_bag.png" />}
-          />
-        </Grid>
+      {cargando && !datos && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+          <CircularProgress />
+        </Box>
+      )}
 
-        <Grid xs={12} sm={6} md={3}>
-          <AppWidgetSummary
-            title="New Users"
-            total={1352831}
-            color="info"
-            icon={<img alt="icon" src="/assets/icons/glass/ic_glass_users.png" />}
-          />
-        </Grid>
+      {datos && (
+        <Grid container spacing={3} sx={{ opacity: cargando ? 0.6 : 1 }}>
+          <Grid xs={12} sm={6} md={4} lg={2}>
+            <Indicador
+              titulo="Entregado"
+              valor={moneda(kpis.ventas)}
+              detalle={`${kpis.rutas} ruta(s)`}
+              icono="eva:shopping-bag-fill"
+            />
+          </Grid>
+          <Grid xs={12} sm={6} md={4} lg={2}>
+            <Indicador
+              titulo="Cobrado"
+              valor={moneda(kpis.cobrado)}
+              detalle={`${moneda(kpis.efectivo)} en efectivo`}
+              icono="eva:credit-card-fill"
+              color="success"
+            />
+          </Grid>
+          <Grid xs={12} sm={6} md={4} lg={2}>
+            <Indicador
+              titulo="Paradas"
+              valor={`${kpis.paradasCerradas}/${kpis.paradas}`}
+              detalle={
+                kpis.paradas > kpis.paradasCerradas
+                  ? `${kpis.paradas - kpis.paradasCerradas} pendiente(s)`
+                  : 'todas cerradas'
+              }
+              icono="eva:pin-fill"
+              color="info"
+            />
+          </Grid>
+          <Grid xs={12} sm={6} md={4} lg={2}>
+            <Indicador
+              titulo="Pedidos en cola"
+              valor={datos.pedidos.pendiente}
+              detalle={`${datos.pedidos.en_ruta} en ruta`}
+              icono="eva:file-text-fill"
+              color="warning"
+            />
+          </Grid>
+          <Grid xs={12} sm={6} md={4} lg={2}>
+            <Indicador
+              titulo="Efectivo sin rendir"
+              valor={moneda(datos.sinRendir.monto)}
+              detalle={`${datos.sinRendir.rutas} ruta(s), de cualquier dia`}
+              icono="eva:alert-circle-fill"
+              color="warning"
+              alerta={datos.sinRendir.monto > 0}
+            />
+          </Grid>
+          <Grid xs={12} sm={6} md={4} lg={2}>
+            <Indicador
+              titulo="Faltante"
+              valor={`${kpis.faltante} u.`}
+              detalle={kpis.faltante > 0 ? 'no volvio ni figura entregado' : 'sin faltantes'}
+              icono="eva:cube-fill"
+              color="error"
+              alerta={kpis.faltante > 0}
+            />
+          </Grid>
 
-        <Grid xs={12} sm={6} md={3}>
-          <AppWidgetSummary
-            title="Item Orders"
-            total={1723315}
-            color="warning"
-            icon={<img alt="icon" src="/assets/icons/glass/ic_glass_buy.png" />}
-          />
-        </Grid>
+          <Grid xs={12} lg={7}>
+            <RutasDelDia rutas={datos.rutas} />
+          </Grid>
+          <Grid xs={12} lg={5}>
+            <Card sx={{ height: 1 }}>
+              <CardHeader title="Resultado de las paradas" />
+              <Stack direction="row" flexWrap="wrap" useFlexGap spacing={1} sx={{ p: 3 }}>
+                {ESTADOS_PARADA.map((estado) => (
+                  <Chip
+                    key={estado}
+                    color={ETIQUETA_PARADA[estado].color}
+                    variant={datos.resultados[estado] > 0 ? 'filled' : 'outlined'}
+                    label={`${ETIQUETA_PARADA[estado].texto}: ${datos.resultados[estado] || 0}`}
+                  />
+                ))}
+              </Stack>
+            </Card>
+          </Grid>
 
-        <Grid xs={12} sm={6} md={3}>
-          <AppWidgetSummary
-            title="Bug Reports"
-            total={234}
-            color="error"
-            icon={<img alt="icon" src="/assets/icons/glass/ic_glass_message.png" />}
-          />
+          <Grid xs={12} md={7}>
+            <VentasSemana serie={datos.serie} />
+          </Grid>
+          <Grid xs={12} md={5}>
+            <AlertasStock stock={datos.stock} />
+          </Grid>
         </Grid>
-
-        <Grid xs={12} md={6} lg={8}>
-          <AppWebsiteVisits
-            title="Website Visits"
-            subheader="(+43%) than last year"
-            chart={{
-              labels: [
-                '01/01/2003',
-                '02/01/2003',
-                '03/01/2003',
-                '04/01/2003',
-                '05/01/2003',
-                '06/01/2003',
-                '07/01/2003',
-                '08/01/2003',
-                '09/01/2003',
-                '10/01/2003',
-                '11/01/2003',
-              ],
-              series: [
-                {
-                  name: 'Team A',
-                  type: 'column',
-                  fill: 'solid',
-                  data: [23, 11, 22, 27, 13, 22, 37, 21, 44, 22, 30],
-                },
-                {
-                  name: 'Team B',
-                  type: 'area',
-                  fill: 'gradient',
-                  data: [44, 55, 41, 67, 22, 43, 21, 41, 56, 27, 43],
-                },
-                {
-                  name: 'Team C',
-                  type: 'line',
-                  fill: 'solid',
-                  data: [30, 25, 36, 30, 45, 35, 64, 52, 59, 36, 39],
-                },
-              ],
-            }}
-          />
-        </Grid>
-
-        <Grid xs={12} md={6} lg={4}>
-          <AppCurrentVisits
-            title="Current Visits"
-            chart={{
-              series: [
-                { label: 'America', value: 4344 },
-                { label: 'Asia', value: 5435 },
-                { label: 'Europe', value: 1443 },
-                { label: 'Africa', value: 4443 },
-              ],
-            }}
-          />
-        </Grid>
-
-        <Grid xs={12} md={6} lg={8}>
-          <AppConversionRates
-            title="Conversion Rates"
-            subheader="(+43%) than last year"
-            chart={{
-              series: [
-                { label: 'Italy', value: 400 },
-                { label: 'Japan', value: 430 },
-                { label: 'China', value: 448 },
-                { label: 'Canada', value: 470 },
-                { label: 'France', value: 540 },
-                { label: 'Germany', value: 580 },
-                { label: 'South Korea', value: 690 },
-                { label: 'Netherlands', value: 1100 },
-                { label: 'United States', value: 1200 },
-                { label: 'United Kingdom', value: 1380 },
-              ],
-            }}
-          />
-        </Grid>
-
-        <Grid xs={12} md={6} lg={4}>
-          <AppCurrentSubject
-            title="Current Subject"
-            chart={{
-              categories: ['English', 'History', 'Physics', 'Geography', 'Chinese', 'Math'],
-              series: [
-                { name: 'Series 1', data: [80, 50, 30, 40, 100, 20] },
-                { name: 'Series 2', data: [20, 30, 40, 80, 20, 80] },
-                { name: 'Series 3', data: [44, 76, 78, 13, 43, 10] },
-              ],
-            }}
-          />
-        </Grid>
-
-        <Grid xs={12} md={6} lg={8}>
-          <AppNewsUpdate
-            title="News Update"
-            list={[...Array(5)].map((_, index) => ({
-              id: faker.string.uuid(),
-              title: faker.person.jobTitle(),
-              description: faker.commerce.productDescription(),
-              image: `/assets/images/covers/cover_${index + 1}.jpg`,
-              postedAt: faker.date.recent(),
-            }))}
-          />
-        </Grid>
-
-        <Grid xs={12} md={6} lg={4}>
-          <AppOrderTimeline
-            title="Order Timeline"
-            list={[...Array(5)].map((_, index) => ({
-              id: faker.string.uuid(),
-              title: [
-                '1983, orders, $4220',
-                '12 Invoices have been paid',
-                'Order #37745 from September',
-                'New order placed #XF-2356',
-                'New order placed #XF-2346',
-              ][index],
-              type: `order${index + 1}`,
-              time: faker.date.past(),
-            }))}
-          />
-        </Grid>
-
-        <Grid xs={12} md={6} lg={4}>
-          <AppTrafficBySite
-            title="Traffic by Site"
-            list={[
-              {
-                name: 'FaceBook',
-                value: 323234,
-                icon: <Iconify icon="eva:facebook-fill" color="#1877F2" width={32} />,
-              },
-              {
-                name: 'Google',
-                value: 341212,
-                icon: <Iconify icon="eva:google-fill" color="#DF3E30" width={32} />,
-              },
-              {
-                name: 'Linkedin',
-                value: 411213,
-                icon: <Iconify icon="eva:linkedin-fill" color="#006097" width={32} />,
-              },
-              {
-                name: 'Twitter',
-                value: 443232,
-                icon: <Iconify icon="eva:twitter-fill" color="#1C9CEA" width={32} />,
-              },
-            ]}
-          />
-        </Grid>
-
-        <Grid xs={12} md={6} lg={8}>
-          <AppTasks
-            title="Tasks"
-            list={[
-              { id: '1', name: 'Create FireStone Logo' },
-              { id: '2', name: 'Add SCSS and JS files if required' },
-              { id: '3', name: 'Stakeholder Meeting' },
-              { id: '4', name: 'Scoping & Estimations' },
-              { id: '5', name: 'Sprint Showcase' },
-            ]}
-          />
-        </Grid>
-      </Grid>
+      )}
     </Container>
   );
 }
